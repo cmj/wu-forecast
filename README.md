@@ -49,6 +49,8 @@ On Windows, run it as `python wu-forecast.py Seattle WA` instead.
 | `--short` | Only the temperature and humidity/pressure/cloud panels |
 | `--padding` | Horizontal padding in pixels (default 5, `0` to disable) |
 | `--no-caption` | Don't overlay the location/timestamp caption on the image |
+| `--latest` | Also point a stable filename (default `latest.png`) at this run's image - symlink on Linux/macOS, copy on Windows |
+| `--latest-name` | Filename to use for `--latest` (default: `latest.png`) |
 | `--wait` | Seconds to wait for the page/chart to render (default 2.5) |
 | `--no-headless` | Run Firefox with a visible window (useful for debugging) |
 | `--view` | Open the saved image after saving |
@@ -58,3 +60,4 @@ On Windows, run it as `python wu-forecast.py Seattle WA` instead.
 
 - Anonymous imgur uploads only need a Client ID, not a secret API key - register your own for free at [api.imgur.com](https://api.imgur.com/oauth2/addclient) if you'd rather not use the built-in public one.
 - Each run writes both `{city}_{timestamp}.png` and `{city}_{timestamp}.txt` to the output directory.
+- Use `--latest` (e.g. in a cron job) to keep a stable `latest.png` pointing at the newest screenshot - handy for pointing a desktop widget (KDE Media Frame, etc.) at a fixed path instead of a timestamped one. It's a symlink on Linux/macOS and a plain copy on Windows, since Windows symlinks usually need elevated permissions.

@@ -15,6 +15,7 @@ import argparse
 import base64
 import os
 import re
+import shutil
 import subprocess
 import sys
 import platform
@@ -209,6 +210,32 @@ def slugify(text):
     return re.sub(r"[\s_-]+", "_", text)
 
 
+def update_latest(png_path, latest_path, quiet=False):
+    """Point latest_path at png_path: symlink on POSIX, copy on Windows
+    (or wherever symlinks aren't permitted)."""
+    png_path = Path(png_path)
+    latest_path = Path(latest_path)
+
+    if latest_path.exists() or latest_path.is_symlink():
+        try:
+            latest_path.unlink()
+        except OSError as e:
+            log(f"[!] Could not remove existing {latest_path} ({e}); skipping latest update.", quiet)
+            return
+
+    if platform.system() == "Windows":
+        shutil.copyfile(png_path, latest_path)
+        log(f"[*] Copied to {latest_path}", quiet)
+    else:
+        try:
+            os.symlink(png_path.name, latest_path)
+            log(f"[*] Linked {latest_path} -> {png_path.name}", quiet)
+        except OSError as e:
+            log(f"[!] Symlink failed ({e}); falling back to copy.", quiet)
+            shutil.copyfile(png_path, latest_path)
+            log(f"[*] Copied to {latest_path}", quiet)
+
+
 def open_file(path, quiet=False):
     system = platform.system()
     try:
@@ -240,6 +267,11 @@ def main():
     ap.add_argument("--wait", type=float, default=2.5, help="Seconds to wait for the page/chart to render (default 2.5)")
     ap.add_argument("--padding", type=int, default=5, help="Horizontal padding in pixels (default 5, 0 to disable)")
     ap.add_argument("--no-caption", action="store_true", help="Don't overlay the location/timestamp caption on the image")
+    ap.add_argument("--latest", action="store_true",
+                     help="Also point a stable filename (default latest.png) at this run's image - "
+                          "symlink on Linux/macOS, copy on Windows. Handy for desktop widgets/media frames.")
+    ap.add_argument("--latest-name", default="latest.png",
+                     help="Filename to use for --latest (default: latest.png)")
     ap.add_argument("-q", "--quiet", action="store_true", help="Only print the final result line")
     ap.add_argument("--view", action="store_true", help="Open the saved image after saving")
     args = ap.parse_args()
@@ -276,6 +308,11 @@ def main():
         caption = f"{address} - {ts_for_caption}".strip(" -")
         caption_image(png_path, caption, dark=args.dark)
 
+    latest_path = None
+    if args.latest:
+        latest_path = out_dir / args.latest_name
+        update_latest(png_path, latest_path, quiet=args.quiet)
+
     lines = [
         f"City query: {query}",
         f"Resolved address: {address}",
@@ -283,6 +320,8 @@ def main():
         f"Timestamp: {timestamp_now.isoformat()}",
         f"Image file: {png_path}",
     ]
+    if latest_path is not None:
+        lines.append(f"Latest file: {latest_path}")
 
     imgur_link = None
     delete_hash = None
