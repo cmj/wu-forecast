@@ -48,6 +48,7 @@ On Windows, run it as `python wu-forecast.py Seattle WA` instead.
 | `--dark` | Dark mode via DarkReader |
 | `--short` | Only the temperature and humidity/pressure/cloud panels |
 | `--padding` | Horizontal padding in pixels (default 5, `0` to disable) |
+| `--no-caption` | Don't overlay the location/timestamp caption on the image |
 | `--wait` | Seconds to wait for the page/chart to render (default 2.5) |
 | `--no-headless` | Run Firefox with a visible window (useful for debugging) |
 | `--view` | Open the saved image after saving |

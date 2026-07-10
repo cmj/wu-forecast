@@ -238,6 +238,7 @@ def main():
     ap.add_argument("--short", action="store_true", help="Only include the temperature and humidity/pressure/cloud panels")
     ap.add_argument("--wait", type=float, default=2.5, help="Seconds to wait for the page/chart to render (default 2.5)")
     ap.add_argument("--padding", type=int, default=5, help="Horizontal padding in pixels (default 5, 0 to disable)")
+    ap.add_argument("--no-caption", action="store_true", help="Don't overlay the location/timestamp caption on the image")
     ap.add_argument("-q", "--quiet", action="store_true", help="Only print the final result line")
     ap.add_argument("--view", action="store_true", help="Open the saved image after saving")
     args = ap.parse_args()
@@ -269,9 +270,10 @@ def main():
         quiet=args.quiet,
     )
 
-    caption = f"{address} - {ts_for_caption}".strip(" -")
     pad_image(png_path, padding=args.padding)
-    caption_image(png_path, caption, dark=args.dark)
+    if not args.no_caption:
+        caption = f"{address} - {ts_for_caption}".strip(" -")
+        caption_image(png_path, caption, dark=args.dark)
 
     lines = [
         f"City query: {query}",
