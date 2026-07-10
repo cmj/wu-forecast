@@ -57,7 +57,8 @@ def geocode_city(query, quiet=False):
     admin_code = (loc.get("adminDistrictCode") or [None])[0]
     address = loc["address"][0]
 
-    url_ext = f"{country_code}/{admin_code}/{city}" if admin_code else f"{country_code}/{city}"
+    city_slug = city.replace(" ", "-")
+    url_ext = f"{country_code}/{admin_code}/{city_slug}" if admin_code else f"{country_code}/{city_slug}"
     return url_ext.lower(), address
 
 
