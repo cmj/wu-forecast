@@ -150,14 +150,16 @@ def _find_font(size):
         return ImageFont.load_default()
 
 
-def pad_image(path, padding=5):
-    if padding <= 0:
+def pad_image(path, padding=5, top_padding=None):
+    if top_padding is None:
+        top_padding = padding
+    if padding <= 0 and top_padding <= 0:
         return
     img = Image.open(path).convert("RGB")
     bg = img.getpixel((0, 0))
 
-    padded = Image.new("RGB", (img.width + padding * 2, img.height), bg)
-    padded.paste(img, (padding, 0))
+    padded = Image.new("RGB", (img.width + padding * 2, img.height + top_padding), bg)
+    padded.paste(img, (padding, top_padding))
     padded.save(path)
 
 
@@ -266,7 +268,10 @@ def main():
     ap.add_argument("--short", action="store_true", help="Only include the temperature and humidity/pressure/cloud panels")
     ap.add_argument("--wait", type=float, default=2.5, help="Seconds to wait for the page/chart to render (default 2.5)")
     ap.add_argument("--padding", type=int, default=5, help="Horizontal padding in pixels (default 5, 0 to disable)")
+    ap.add_argument("--top-padding", type=int, default=None,
+                     help="Padding in pixels above the chart (default: same as --padding)")
     ap.add_argument("--no-caption", action="store_true", help="Don't overlay the location/timestamp caption on the image")
+    ap.add_argument("--no-info", action="store_true", help="Don't write the accompanying .txt info file, just save the screenshot")
     ap.add_argument("--latest", action="store_true",
                      help="Also point a stable filename (default latest.png) at this run's image - "
                           "symlink on Linux/macOS, copy on Windows. Handy for desktop widgets/media frames.")
@@ -291,7 +296,7 @@ def main():
 
     base_name = f"{slugify(query)}_{ts_for_filename}"
     png_path = out_dir / f"{base_name}.png"
-    info_path = out_dir / f"{base_name}.txt"
+    info_path = None if args.no_info else out_dir / f"{base_name}.txt"
 
     screenshot_forecast(
         wg_url,
@@ -303,7 +308,7 @@ def main():
         quiet=args.quiet,
     )
 
-    pad_image(png_path, padding=args.padding)
+    pad_image(png_path, padding=args.padding, top_padding=args.top_padding)
     if not args.no_caption:
         caption = f"{address} - {ts_for_caption}".strip(" -")
         caption_image(png_path, caption, dark=args.dark)
@@ -313,32 +318,35 @@ def main():
         latest_path = out_dir / args.latest_name
         update_latest(png_path, latest_path, quiet=args.quiet)
 
-    lines = [
-        f"City query: {query}",
-        f"Resolved address: {address}",
-        f"Forecast URL: {wg_url}",
-        f"Timestamp: {timestamp_now.isoformat()}",
-        f"Image file: {png_path}",
-    ]
-    if latest_path is not None:
-        lines.append(f"Latest file: {latest_path}")
+    if info_path is not None:
+        lines = [
+            f"City query: {query}",
+            f"Resolved address: {address}",
+            f"Forecast URL: {wg_url}",
+            f"Timestamp: {timestamp_now.isoformat()}",
+            f"Image file: {png_path}",
+        ]
+        if latest_path is not None:
+            lines.append(f"Latest file: {latest_path}")
 
     imgur_link = None
     delete_hash = None
     if args.upload:
         imgur_link, delete_hash = upload_to_imgur(png_path, args.imgur_client_id, quiet=args.quiet)
-        lines.append(f"Imgur link: {imgur_link}")
-        lines.append(f"Imgur delete hash: {delete_hash}")
-        lines.append(f"Imgur delete link: https://imgur.com/delete/{delete_hash}")
+        if info_path is not None:
+            lines.append(f"Imgur link: {imgur_link}")
+            lines.append(f"Imgur delete hash: {delete_hash}")
+            lines.append(f"Imgur delete link: https://imgur.com/delete/{delete_hash}")
 
-    info_path.write_text("\n".join(lines) + "\n")
+    if info_path is not None:
+        info_path.write_text("\n".join(lines) + "\n")
 
     if args.upload:
         print(f"10-day forecast - {address} {imgur_link} (delete: https://imgur.com/delete/{delete_hash})")
     else:
         print(f"10-day forecast - {address} saved to {png_path}")
 
-    if not args.quiet:
+    if not args.quiet and info_path is not None:
         print(f"[*] Info file: {info_path}", file=sys.stderr)
 
     if args.view:
