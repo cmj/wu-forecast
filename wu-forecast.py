@@ -213,8 +213,8 @@ def slugify(text):
 
 
 def update_latest(png_path, latest_path, quiet=False):
-    """Point latest_path at png_path: symlink on POSIX, copy on Windows
-    (or wherever symlinks aren't permitted)."""
+    """Point latest_path at png_path by copying the file (works everywhere,
+    and avoids apps like KDE's media frame that don't handle symlinks well)."""
     png_path = Path(png_path)
     latest_path = Path(latest_path)
 
@@ -225,17 +225,8 @@ def update_latest(png_path, latest_path, quiet=False):
             log(f"[!] Could not remove existing {latest_path} ({e}); skipping latest update.", quiet)
             return
 
-    if platform.system() == "Windows":
-        shutil.copyfile(png_path, latest_path)
-        log(f"[*] Copied to {latest_path}", quiet)
-    else:
-        try:
-            os.symlink(png_path.name, latest_path)
-            log(f"[*] Linked {latest_path} -> {png_path.name}", quiet)
-        except OSError as e:
-            log(f"[!] Symlink failed ({e}); falling back to copy.", quiet)
-            shutil.copyfile(png_path, latest_path)
-            log(f"[*] Copied to {latest_path}", quiet)
+    shutil.copyfile(png_path, latest_path)
+    log(f"[*] Copied to {latest_path}", quiet)
 
 
 def open_file(path, quiet=False):
